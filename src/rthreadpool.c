@@ -35,6 +35,12 @@ struct rthreadpool {
     pthread_cond_t alldone_notif;
 };
 
+static inline void *thread_loop(void *arg);
+static inline void rthreadqueue_push_unsafe(rthreadqueue_t *queue,
+                                            rthreadwork_t *work);
+static inline void rthreadqueue_pop_unsafe(rthreadwork_t *work,
+                                           rthreadqueue_t *queue);
+
 rthreadpool_t *rthreadpool_init(int threads_count) {
 
     rthreadpool_t *pool = (rthreadpool_t*) malloc(sizeof(rthreadpool_t));
