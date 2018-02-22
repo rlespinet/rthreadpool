@@ -53,7 +53,7 @@ rthreadpool_t *rthreadpool_init(int threads_count) {
     pthread_cond_init(&queue->push_notif, NULL);
     pthread_cond_init(&queue->pop_notif, NULL);
 
-    pool->running_threads = threads_count;
+    pool->running_threads = 0;
     pool->active_threads = threads_count;
 
     pthread_mutex_init(&pool->mtx, NULL);
@@ -188,28 +188,16 @@ void *thread_loop(void *arg) {
 
         pthread_mutex_lock(&pool->mtx);
 
-        if (queue->count == 0 && pool->running) {
-
-            pool->running_threads--;
-
-            if (pool->running_threads == 0) {
-                pthread_cond_broadcast(&pool->alldone_notif);
-            }
-
-            while (queue->count == 0 && pool->running) {
-                pthread_cond_wait(&queue->pop_notif, &pool->mtx);
-            }
-
-            if (pool->running) {
-                pool->running_threads++;
-            }
-
+        while (queue->count == 0 && pool->running) {
+            pthread_cond_wait(&queue->pop_notif, &pool->mtx);
         }
 
         if (!pool->running) {
             pthread_mutex_unlock(&pool->mtx);
             break;
         }
+
+        pool->running_threads++;
 
         rthreadwork_t work;
         rthreadqueue_pop_unsafe(&work, queue);
@@ -220,6 +208,16 @@ void *thread_loop(void *arg) {
 
         // Do the work !
         work.fun(work.arg);
+
+        pthread_mutex_lock(&pool->mtx);
+
+        pool->running_threads--;
+
+        if (pool->running_threads == 0 && queue->count == 0) {
+            pthread_cond_broadcast(&pool->alldone_notif);
+        }
+
+        pthread_mutex_unlock(&pool->mtx);
 
     }
 
