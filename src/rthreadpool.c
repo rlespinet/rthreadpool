@@ -176,7 +176,7 @@ void rthreadpool_join(rthreadpool_t *pool) {
 
     rthreadqueue_t *queue = &pool->queue;
 
-    while (pool->running_threads > 0 && queue->count > 0) {
+    while (pool->running_threads > 0 || queue->count > 0) {
 
         pthread_cond_wait(&pool->alldone_notif, &pool->mtx);
 
